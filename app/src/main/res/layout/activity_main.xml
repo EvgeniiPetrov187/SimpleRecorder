@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <!--  <com.petrov.simplerecorder.RecordVisualizerView
+          android:id="@+id/visualizer"
+          android:layout_width="match_parent"
+          android:layout_height="fill_parent"
+          android:layout_centerHorizontal="true"
+          android:background="@android:color/background_dark"/> -->
+
+    <TextView
+        android:id="@+id/clock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="35dp"
+        android:textSize="35sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <SeekBar
+        android:id="@+id/seekBar"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="50dp"
+        app:layout_constraintBottom_toTopOf="@+id/buttons" />
+
+    <LinearLayout
+        android:id="@+id/buttons"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="25dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <ImageView
+            android:id="@+id/repeat"
+            style="@style/button"
+            android:onClick="repeat"
+            android:src="@drawable/repeat_inactive" />
+
+        <ImageView
+            android:id="@+id/back"
+            style="@style/button"
+            android:onClick="rewind"
+            android:src="@drawable/back" />
+
+        <ImageView
+            android:id="@+id/stop"
+            style="@style/button"
+            android:onClick="playStop"
+            android:src="@drawable/stop_inactive" />
+
+        <ImageView
+            android:id="@+id/pause"
+            style="@style/button"
+            android:onClick="pause"
+            android:src="@drawable/pause_inactive" />
+
+        <ImageView
+            android:id="@+id/play"
+            style="@style/button"
+            android:onClick="playStart"
+            android:src="@drawable/play_inactive" />
+
+        <ImageView
+            android:id="@+id/record"
+            style="@style/button"
+            android:onClick="recordStart"
+            android:src="@drawable/record_inactive" />
+
+
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
