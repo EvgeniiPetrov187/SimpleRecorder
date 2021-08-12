@@ -1,9 +1,8 @@
 package com.petrov.simplerecorder;
 
-import android.app.Activity;
-
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -17,16 +16,20 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
+
 import java.io.File;
 import java.io.IOException;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity implements OnTickListener {
 
     private MediaRecorder mediaRecorder;
     private MediaPlayer mediaPlayer;
     private String fileName;
     private SeekBar seekBar;
-    private final Handler handler = new Handler();
+    private final Handler handlerRecord = new Handler();
+    private final Handler handlerPlay = new Handler();
     private ImageView recordButton;
     private ImageView playButton;
     private TextView clock;
@@ -34,6 +37,8 @@ public class MainActivity extends Activity {
     private ImageView pauseButton;
     private Toast toast;
     private boolean recordPressed;
+    private RecorderVisualizerView recorderVisualizerView;
+    private Timer timer;
 
 
     @Override
@@ -42,19 +47,33 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         mediaRecorder = new MediaRecorder();
         mediaPlayer = new MediaPlayer();
-
+        recorderVisualizerView = findViewById(R.id.visualizer);
 
         recordPressed = false;
-        fileName = Environment.getExternalStorageDirectory() + "/record.3gpp";
+        fileName = Environment.getExternalStorageDirectory() + "/record.mp3";
 
-        clock = (TextView) findViewById(R.id.clock);
-        recordButton = (ImageView) findViewById(R.id.record);
-        playButton = (ImageView) findViewById(R.id.play);
-        repeatButton = (ImageView) findViewById(R.id.repeat);
-        pauseButton = (ImageView) findViewById(R.id.pause);
-        seekBar = (SeekBar) findViewById(R.id.seekBar);
+        clock = findViewById(R.id.clock);
+        recordButton = findViewById(R.id.record);
+        playButton = findViewById(R.id.play);
+        repeatButton = findViewById(R.id.repeat);
+        pauseButton = findViewById(R.id.pause);
+        seekBar = findViewById(R.id.seekBar);
         toast = new Toast(getApplicationContext());
         toast.setGravity(Gravity.CENTER, Gravity.CENTER, Gravity.TOP);
+        timer = new Timer(this);
+
+//        recordButton.setOnClickListener(new View.OnClickListener() {
+//            @RequiresApi(api = Build.VERSION_CODES.N)
+//            @Override
+//            public void onClick(View v) {
+//                if(recordPressed)
+//                    recordPause();
+//                if(!recordPressed)
+//                    recordResume();
+//                else
+//                    recordStart(v);
+//            }
+//        };
         seekBar.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -66,13 +85,35 @@ public class MainActivity extends Activity {
         });
     }
 
+//    @RequiresApi(api = Build.VERSION_CODES.N)
+//    public void recordPause(){
+//        mediaRecorder.pause();
+//        recordPressed = false;
+//        recordButton.setImageResource(R.drawable.record_inactive);
+//        toast = Toast.makeText(getApplicationContext(),
+//                "Record paused", Toast.LENGTH_SHORT);
+//        toast.show();
+//    }
+//
+//
+//    @RequiresApi(api = Build.VERSION_CODES.N)
+//    public void recordResume(){
+//        mediaRecorder.resume();
+//        recordPressed = true;
+//        recordButton.setImageResource(R.drawable.record_active);
+//        toast = Toast.makeText(getApplicationContext(),
+//                "Record resumed", Toast.LENGTH_SHORT);
+//        toast.show();
+//    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public void recordStart(View v) {
         try {
             if (!recordPressed) {
+                recorderVisualizerView.cleanAll();
                 recordPressed = true;
                 mediaRecorder = new MediaRecorder();
                 releaseRecorder();
-                recordButton.setImageResource(R.drawable.record_active);
                 File outFile = new File(fileName);
                 if (outFile.exists()) {
                     outFile.delete();
@@ -80,14 +121,17 @@ public class MainActivity extends Activity {
 
                 mediaRecorder = new MediaRecorder();
                 mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-                mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-                mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+                mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+                mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
                 mediaRecorder.setAudioChannels(2);
                 mediaRecorder.setMaxDuration(900000);
                 mediaRecorder.setOutputFile(fileName);
                 mediaRecorder.setAudioEncodingBitRate(128000);
                 mediaRecorder.prepare();
                 mediaRecorder.start();
+                timer.start();
+                recordButton.setImageResource(R.drawable.record_active);
+                //startRecordProgressUpdater();
                 toast = Toast.makeText(getApplicationContext(),
                         "Record", Toast.LENGTH_SHORT);
                 toast.show();
@@ -96,6 +140,7 @@ public class MainActivity extends Activity {
                 recordPressed = false;
                 if (mediaRecorder != null) {
                     mediaRecorder.stop();
+                    timer.stop();
                     recordButton.setImageResource(R.drawable.record_inactive);
                     toast = Toast.makeText(getApplicationContext(),
                             "Stop record", Toast.LENGTH_SHORT);
@@ -118,9 +163,10 @@ public class MainActivity extends Activity {
     public void playStop(View v) {
         if (mediaPlayer != null) {
             mediaPlayer.stop();
+            timer.stop();
+            playButton.setImageResource(R.drawable.play_inactive);
             pauseButton.setImageResource(R.drawable.pause_inactive);
             seekBar.setProgress(0);
-            clock.setText("0 seconds");
             toast = Toast.makeText(getApplicationContext(),
                     "Stop", Toast.LENGTH_SHORT);
             toast.show();
@@ -129,17 +175,19 @@ public class MainActivity extends Activity {
 
     public void playStart(View v) {
         try {
-
             releasePlayer();
             mediaPlayer = new MediaPlayer();
             mediaPlayer.setDataSource(fileName);
             mediaPlayer.prepare();
             seekBar.setMax(mediaPlayer.getDuration());
             mediaPlayer.start();
-            startPlayProgressUpdater();
+            timer.start();
+            playButton.setImageResource(R.drawable.play_active);
+            // playProgressUpdater();
             toast = Toast.makeText(getApplicationContext(),
                     "Play", Toast.LENGTH_SHORT);
             toast.show();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -158,8 +206,9 @@ public class MainActivity extends Activity {
     }
 
     public void pause(View v) {
-        if (mediaPlayer.isPlaying()) {
+        if (mediaPlayer != null) {
             mediaPlayer.pause();
+            timer.pause();
             pauseButton.setImageResource(R.drawable.pause_active);
             toast = Toast.makeText(getApplicationContext(),
                     "Pause", Toast.LENGTH_SHORT);
@@ -169,7 +218,8 @@ public class MainActivity extends Activity {
                 && mediaPlayer.getDuration() - mediaPlayer.getCurrentPosition() > 500) {
             pauseButton.setImageResource(R.drawable.pause_inactive);
             mediaPlayer.start();
-            startPlayProgressUpdater();
+            timer.start();
+            //startRecordProgressUpdater();
             toast = Toast.makeText(getApplicationContext(),
                     "Play", Toast.LENGTH_SHORT);
             toast.show();
@@ -204,22 +254,20 @@ public class MainActivity extends Activity {
         releaseRecorder();
     }
 
-    public void startPlayProgressUpdater() {
-        seekBar.setProgress(mediaPlayer.getCurrentPosition());
-        clock.setText((mediaPlayer.getCurrentPosition() / 1000) + " seconds");
-        playButton.setImageResource(R.drawable.play_active);
-        if (mediaPlayer.isPlaying()) {
-            Runnable notification = new Runnable() {
-                public void run() {
-                    startPlayProgressUpdater();
-                }
-            };
-            handler.postDelayed(notification, 10);
-        } else {
-            clock.setText((mediaPlayer.getCurrentPosition() / 1000) + " seconds");
-            playButton.setImageResource(R.drawable.play_inactive);
-        }
-    }
+
+
+//    public void startRecordProgressUpdater() {
+//        if (recordPressed) {
+//            Runnable notification = new Runnable() {
+//                public void run() {
+//                    //startRecordProgressUpdater();
+//                    recorderVisualizerView.addAmplitude(mediaRecorder.getMaxAmplitude());
+//                    ;
+//                }
+//            };
+//            handlerRecord.postDelayed(notification, 100);
+//        }
+//    }
 
     public void repeat(View v) {
         if (mediaPlayer.isPlaying()) {
@@ -242,7 +290,44 @@ public class MainActivity extends Activity {
             toast.show();
         }
     }
+
+    @Override
+    public void OnTimerTick(String duration) {
+        seekBar.setProgress(mediaPlayer.getCurrentPosition());
+        clock.setText(duration);
+        if (mediaPlayer.isPlaying()) {
+            playButton.setImageResource(R.drawable.play_active);
+        }
+        if (recordPressed && !mediaPlayer.isPlaying()) {
+            recorderVisualizerView.addAmplitude(mediaRecorder.getMaxAmplitude());
+        } else if (!mediaPlayer.isPlaying()) {
+            playButton.setImageResource(R.drawable.play_inactive);
+            timer.stop();
+        }
+    }
+
+
+//    public void setVisualiser() {
+//        Runnable visual = new Runnable() {
+//            @Override
+//            public void run() {
+//                visualizer = new Visualizer(mediaPlayer.getAudioSessionId());
+//                visualizer.setCaptureSize(Visualizer.getCaptureSizeRange()[2]);
+//                visualizer.setDataCaptureListener(new Visualizer.OnDataCaptureListener() {
+//                    @Override
+//                    public void onWaveFormDataCapture(Visualizer visualizer, byte[] waveform, int samplingRate) {
+//                        playerVisualizerView.update(waveform);
+//                    }
+//
+//                    @Override
+//                    public void onFftDataCapture(Visualizer visualizer, byte[] fft, int samplingRate) {
+//                    }
+//                }, Visualizer.getMaxCaptureRate() / 2, true, false);
+//            }
+//        };
+//    }
 }
+
 
 
 
