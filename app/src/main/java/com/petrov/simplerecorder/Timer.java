@@ -26,7 +26,7 @@ public class Timer {
             public void run() {
                 duration += delay;
                 handler.postDelayed(runnable, delay);
-                listener.OnTimerTick(timerFormat());
+                listener.OnTimerEvent(timerFormat());
             }
         };
     }

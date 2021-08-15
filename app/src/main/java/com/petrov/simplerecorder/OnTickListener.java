@@ -1,5 +1,5 @@
 package com.petrov.simplerecorder;
 
 public interface OnTickListener {
-    void OnTimerTick(String duration);
+    void OnTimerEvent(String duration);
 }
